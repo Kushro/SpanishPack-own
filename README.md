@@ -79,3 +79,13 @@ Endpoints (add `?stream=0` for plain JSON instead of SSE):
 
 Cache: in-memory LRU (10 min streams, 30 min manga). `DELETE /api/v3/latino/cache`
 clears it.
+
+Exposure (see `api/src/security.js`): the server listens on `127.0.0.1` and only
+accepts browser calls from loopback origins. For a hosted deployment set
+`LATINO_API_HOST=0.0.0.0` and `LATINO_API_CORS_ORIGINS=https://your.app` (or `*`).
+`/debug`, `/reload` and the cache routes answer loopback clients only, or anyone
+sending `X-Admin-Token: $LATINO_API_ADMIN_TOKEN` when that variable is set.
+
+The Cloudflare bypass no longer downloads Chrome on its own: install Chrome/Chromium
+or set `CF_BYPASS_AUTO_INSTALL=true` (pinned `@puppeteer/browsers`). Chrome keeps its
+sandbox unless it runs as root on Linux or `CF_BYPASS_NO_SANDBOX=true`.

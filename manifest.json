@@ -47,6 +47,21 @@
     "network:domain:api.ani.zip",
     "network:domain:graphql.anilist.co",
     "network:domain:mp4upload.com",
-    "network:domain:yourupload.com"
+    "network:domain:yourupload.com",
+    "network:domain:*.mp4upload.com",
+    "network:domain:www.mp4upload.com",
+    "network:domain:video.sibnet.ru",
+    "network:domain:vidmoly.to",
+    "network:domain:vidmoly.net",
+    "network:domain:my.mail.ru",
+    "network:domain:fsvid.lol",
+    "network:domain:vidzy.live",
+    "network:domain:sendvid.com",
+    "network:domain:www.myvi.ru",
+    "network:domain:younetu.org",
+    "network:domain:vidoza.net",
+    "network:domain:lecteurvideo.com",
+    "network:domain:wookafr.center",
+    "network:domain:up4fun.top"
   ]
 }

@@ -24,15 +24,19 @@ import express from 'express';
 import cors from 'cors';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { existsSync, copyFileSync, mkdirSync } from 'node:fs';
+import { existsSync, copyFileSync, mkdirSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import { createRequire } from 'node:module';
+import { createApiSecurity } from './security.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
 const PORT = Number(process.env.PORT || process.env.LATINO_API_PORT || 8098);
-const HOST = process.env.LATINO_API_HOST || '0.0.0.0';
+// Loopback by default; set LATINO_API_HOST=0.0.0.0 for hosted deployments
+// (Replit, Wasmer, containers). See security.js for CORS and admin settings.
+const security = createApiSecurity('LATINO_API');
+const HOST = security.host;
 
 // ── Bundle loading ────────────────────────────────────────────────────────────
 
@@ -58,6 +62,8 @@ function loadBundle() {
   copyFileSync(LATINO_BUNDLE_SRC, LATINO_BUNDLE);
 
   const mod = require(LATINO_BUNDLE);
+  // The module is loaded; drop the copy so reloads don't accumulate files in tmp.
+  try { rmSync(LATINO_BUNDLE, { force: true }); } catch { /* best effort */ }
   const Bundle = mod.default || mod.LatinoBundleClass || mod;
   const instance = typeof Bundle === 'function' ? new Bundle() : Bundle;
   if (!instance || typeof instance.single !== 'function') {
@@ -551,7 +557,7 @@ function flattenMangaChapters(entries) {
 // ── Express app ───────────────────────────────────────────────────────────────
 
 const app = express();
-app.use(cors());
+app.use(cors(security.corsOptions));
 app.use(express.json({ limit: '2mb' }));
 
 // ── Health ────────────────────────────────────────────────────────────────────
@@ -787,7 +793,7 @@ async function handleDownloadRequest(req, res) {
 app.get(['/download/:anilistId/:episode', '/api/v3/latino/download/:anilistId/:episode'], handleDownloadRequest);
 
 /** GET /api/v3/latino/debug — raw diagnostics per provider */
-app.get('/api/v3/latino/debug', async (req, res) => {
+app.get('/api/v3/latino/debug', security.requireAdmin, async (req, res) => {
   const t = getLatino();
   if (!t) return res.json({ results: [], diagnostics: [] });
   try {
@@ -960,19 +966,19 @@ app.get('/api/v3/latino/manga/pages', handleMangaPages);
 app.get('/api/v3/latino/index/chapters', handleMangaChapters);
 
 // Cache management
-app.delete('/api/v3/latino/cache', (_req, res) => {
+app.delete('/api/v3/latino/cache', security.requireAdmin, (_req, res) => {
   const size = cache.size;
   cache.clear();
   anilistTitleCache.clear();
   res.json({ cleared: size });
 });
 
-app.get('/api/v3/latino/cache/stats', (_req, res) => {
+app.get('/api/v3/latino/cache/stats', security.requireAdmin, (_req, res) => {
   res.json({ size: cache.size, maxSize: MAX_CACHE_SIZE });
 });
 
 // Hot-reload the bundle without restarting the server
-app.post('/api/v3/latino/reload', (_req, res) => {
+app.post('/api/v3/latino/reload', security.requireAdmin, (_req, res) => {
   try {
     const prev = latino;
     latino = null; // force re-load
